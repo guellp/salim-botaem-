@@ -1,0 +1,26 @@
+# 백업 및 임시 복구 파일 제외
+index_recovered.html
+check_cp949.py
+check_log_content.py
+check_marker_hex.py
+dump_html_history.py
+extract_clean_html.py
+extract_clean_html_raw.py
+find_cmd_history.py
+find_original_html.py
+fix_markers_binary.py
+process_hero.py
+repair_all.py
+repair_html_korean.py
+restored_base.html
+smart_restore_encoding.py
+test_alpha.py
+test_pixels.py
+read_end.py
+check_html_korean.py
+patch_passcode.py
+
+# 파이썬 가상환경 및 캐시
+__pycache__/
+*.pyc
+.env
