@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>살림 Botaem | 잠금화면</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #0f4c81 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* 배경 블롭 애니메이션 */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: float 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .bg-blob-1 {
+            width: 400px; height: 400px;
+            background: #3b82f6;
+            top: -100px; left: -100px;
+            animation-delay: 0s;
+        }
+        .bg-blob-2 {
+            width: 350px; height: 350px;
+            background: #06b6d4;
+            bottom: -80px; right: -80px;
+            animation-delay: -4s;
+        }
+        .bg-blob-3 {
+            width: 250px; height: 250px;
+            background: #8b5cf6;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -2s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(20px, -20px) scale(1.05); }
+            66% { transform: translate(-15px, 15px) scale(0.95); }
+        }
+
+        /* 메인 카드 */
+        .lock-card {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 28px;
+            padding: 52px 44px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow:
+                0 25px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255,255,255,0.05) inset;
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 로고 */
+        .lock-logo {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 8px 20px rgba(59, 130, 246, 0.4));
+        }
+
+        .lock-brand {
+            font-size: 26px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+        .lock-brand span {
+            color: #60a5fa;
+        }
+
+        .lock-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+
+        /* 입력 필드 */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .lock-input {
+            width: 100%;
+            padding: 18px 56px 18px 20px;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 12px;
+            text-align: center;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            outline: none;
+            transition: all 0.25s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            font-family: inherit;
+        }
+
+        .lock-input::placeholder {
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 8px;
+            font-size: 18px;
+        }
+
+        .lock-input:focus {
+            border-color: #60a5fa;
+            background: rgba(96, 165, 250, 0.1);
+            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15);
+        }
+
+        /* 눈 아이콘 (비밀번호 표시/숨기기) */
+        .toggle-pw {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: rgba(255,255,255,0.4);
+            font-size: 20px;
+            padding: 4px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .toggle-pw:hover { color: rgba(255,255,255,0.8); }
+
+        /* 확인 버튼 */
+        .btn-unlock {
+            width: 100%;
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-unlock:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(59, 130, 246, 0.55);
+        }
+        .btn-unlock:active {
+            transform: translateY(0);
+        }
+
+        /* 에러 메세지 */
+        .error-msg {
+            font-size: 13px;
+            color: #f87171;
+            min-height: 20px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+        .error-msg.show {
+            opacity: 1;
+        }
+
+        /* 흔들기 애니메이션 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            15%, 45%, 75% { transform: translateX(-8px); }
+            30%, 60%, 90% { transform: translateX(8px); }
+        }
+        .shake {
+            animation: shake 0.5s ease-in-out;
+            border-color: #f87171 !important;
+            background: rgba(248, 113, 113, 0.08) !important;
+        }
+
+        /* 성공 애니메이션 */
+        @keyframes successPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); }
+        }
+        .success {
+            border-color: #34d399 !important;
+            background: rgba(52, 211, 153, 0.1) !important;
+            animation: successPulse 0.6s ease;
+        }
+
+        /* 하단 안내 */
+        .lock-footer {
+            font-size: 12px;
+            color: rgba(255,255,255,0.25);
+            margin-top: 8px;
+        }
+
+        /* 반응형 */
+        @media (max-width: 480px) {
+            .lock-card {
+                padding: 40px 28px;
+                border-radius: 24px;
+            }
+            .lock-input {
+                font-size: 20px;
+                letter-spacing: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 배경 블롭 -->
+    <div class="bg-blob bg-blob-1"></div>
+    <div class="bg-blob bg-blob-2"></div>
+    <div class="bg-blob bg-blob-3"></div>
+
+    <!-- 잠금 카드 -->
+    <div class="lock-card" id="lock-card">
+        <img src="logo.png" alt="살림 Botaem 로고" class="lock-logo" onerror="this.style.display='none'">
+
+        <div class="lock-brand">살림&nbsp;<span>Botaem</span></div>
+        <p class="lock-subtitle">전국 정부지원금 실시간 매칭 플랫폼<br>입장 비밀번호를 입력해 주세요.</p>
+
+        <div class="input-wrapper">
+            <input
+                type="password"
+                id="pw-input"
+                class="lock-input"
+                placeholder="••••••"
+                maxlength="6"
+                inputmode="numeric"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+            >
+            <button class="toggle-pw" id="toggle-pw" type="button" aria-label="비밀번호 표시/숨기기">👁</button>
+        </div>
+
+        <div class="error-msg" id="error-msg">❌ 비밀번호가 올바르지 않습니다.</div>
+
+        <button class="btn-unlock" id="btn-unlock">입장하기</button>
+
+        <p class="lock-footer">살림 Botaem에 오신 것을 환영합니다 🌱</p>
+    </div>
+
+    <script>
+        // ====================================================
+        // 살림 Botaem 잠금 화면 v2.0 (완전 분리형)
+        // ====================================================
+        const CORRECT_PW = "123459"; // 비밀번호 (inject_sheet_data.py가 자동 갱신)
+
+        const input = document.getElementById('pw-input');
+        const btnUnlock = document.getElementById('btn-unlock');
+        const errorMsg = document.getElementById('error-msg');
+        const toggleBtn = document.getElementById('toggle-pw');
+
+        // 이미 인증된 경우 바로 입장 (비밀번호 불일치 시 튕겨냄)
+        try {
+            if (localStorage.getItem('salim_passcode') === CORRECT_PW) {
+                window.location.replace('./index.html');
+            }
+        } catch(e) {}
+
+        // 페이지 로드 시 자동 포커스 (모바일 자판 바로 띄우기)
+        window.addEventListener('load', () => {
+            setTimeout(() => input.focus(), 300);
+        });
+
+        // 비밀번호 표시/숨기기 토글
+        toggleBtn.addEventListener('click', () => {
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                toggleBtn.textContent = '👁';
+            }
+            input.focus();
+        });
+
+        // 비밀번호 확인 함수
+        function verify() {
+            const val = input.value.trim();
+            if (val === CORRECT_PW) {
+                // 성공!
+                input.classList.remove('shake');
+                input.classList.add('success');
+                errorMsg.classList.remove('show');
+                btnUnlock.textContent = '✅ 입장 완료!';
+                btnUnlock.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                try {
+                    localStorage.setItem('salim_passcode', val);
+                } catch(e) {}
+                setTimeout(() => {
+                    window.location.replace('./index.html');
+                }, 500);
+            } else {
+                // 실패
+                input.classList.remove('success');
+                input.classList.add('shake');
+                errorMsg.classList.add('show');
+                input.value = '';
+                setTimeout(() => {
+                    input.classList.remove('shake');
+                    input.focus();
+                }, 500);
+            }
+        }
+
+        // 버튼 클릭
+        btnUnlock.addEventListener('click', verify);
+
+        // 엔터키
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') verify();
+        });
+
+        // 6자리 자동 확인 (숫자 입력 시)
+        input.addEventListener('input', () => {
+            errorMsg.classList.remove('show');
+            if (input.value.length === 6) {
+                setTimeout(verify, 150);
+            }
+        });
+
+        // 카드 터치 시 포커스
+        document.getElementById('lock-card').addEventListener('click', (e) => {
+            if (e.target !== toggleBtn && e.target !== btnUnlock) {
+                input.focus();
+            }
+        });
+    </script>
+</body>
+</html>
