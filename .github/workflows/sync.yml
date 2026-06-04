@@ -1,0 +1,31 @@
+name: Salim Botaem Auto Sync
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 매일 한국 시간 오전 9시 (UTC 00:00) 자동 실행
+  workflow_dispatch: # GitHub 웹 UI에서 수동 실행이 가능하도록 설정
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 깃허브에 커밋/푸시할 수 있는 권한 부여
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Data Injector
+        run: |
+          python inject_sheet_data.py
