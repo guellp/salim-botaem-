@@ -182,6 +182,9 @@ def download_and_parse_sheet():
         raise e
 
 def patch_js_filter_code(html_content):
+    if "container-sido" in html_content and "containerSido" in html_content:
+        print("   ℹ️  이미 다중 선택 필터 및 JS 로직 패치가 완료되어 있습니다. 패치를 건너뜁니다.")
+        return html_content
     print("   🔧 HTML 및 JS 필터 영역 패치 시작...")
 
     # ===== CSS 레이아웃 및 커스텀 멀티셀렉트 스타일 주입 =====
