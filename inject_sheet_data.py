@@ -54,35 +54,113 @@ def download_and_parse_sheet():
         print("   🏆 데이터 다운로드 완료! CSV 데이터 파싱 개시...")
         
         # CSV 파싱
-        reader = csv.DictReader(content.splitlines())
+        lines = content.splitlines()
+        reader = csv.DictReader(lines)
+        rows = list(reader)
         
-        fieldnames = reader.fieldnames or []
-        print(f"   📋 CSV 헤더 목록: {fieldnames[:15]}")
+        print(f"   📋 CSV 레코드 개수: {len(rows)}")
         
         required_headers = [
             "시도", "구군", "서비스명", "소관기관명", "서비스분야", 
             "지원구분", "신청기한", "지원내용", "지원대상", "신청방법", "정보수정일"
         ]
         
+        # 1. 시도 명칭 표준화 헬퍼 함수
+        def get_norm_sido(raw_sido):
+            if not raw_sido:
+                return "전국"
+            raw_sido = raw_sido.strip()
+            SIDO_NATIONAL = {"-", "", "전국", "중앙/공공", "중앙/전국", "중앙", "공공", "전체"}
+            if raw_sido in SIDO_NATIONAL or raw_sido.startswith("중앙"):
+                return "전국"
+            
+            sido_mapping = {
+                "서울특별시": "서울", "서울시": "서울",
+                "부산광역시": "부산", "부산시": "부산",
+                "대구광역시": "대구", "대구시": "대구",
+                "인천광역시": "인천", "인천시": "인천",
+                "광주광역시": "광주", "광주시": "광주",
+                "대전광역시": "대전", "대전시": "대전",
+                "울산광역시": "울산", "울산시": "울산",
+                "세종특별자치시": "세종", "세종시": "세종",
+                "경기도": "경기",
+                "강원특별자치도": "강원", "강원도": "강원",
+                "충청북도": "충북",
+                "충청남도": "충남",
+                "전라북도": "전북", "전북특별자치도": "전북",
+                "전라남도": "전남",
+                "경상북도": "경북",
+                "경상남도": "경남",
+                "제주특별자치도": "제주", "제주시": "제주", "제주도": "제주"
+            }
+            return sido_mapping.get(raw_sido, raw_sido)
+
+        # 2. 동적 구군 표준명칭 매핑 테이블 빌드
+        gugun_map = {}  # key: (norm_sido, short_gugun), value: standard_gugun
+        for row in rows:
+            raw_sido = row.get("지역(도/시)", row.get("시도", ""))
+            norm_sido = get_norm_sido(raw_sido)
+            
+            raw_gugun = row.get("지역(시/군/구)", row.get("구군", ""))
+            if raw_gugun:
+                raw_gugun = raw_gugun.strip()
+                GUGUN_ALL = {"-", "", "−", "–", "전체", "전지역", "해당없음", "없음"}
+                if raw_gugun not in GUGUN_ALL:
+                    # 끝자리가 시/군/구 로 끝나는 표준값 탐색
+                    if len(raw_gugun) >= 2 and (raw_gugun.endswith("시") or raw_gugun.endswith("군") or raw_gugun.endswith("구")):
+                        short_gugun = raw_gugun[:-1]
+                        gugun_map[(norm_sido, short_gugun)] = raw_gugun
+
+        # 하드코딩 교정 룰 (테이블 누락 대비 방어 코드)
+        hard_rules = {
+            "군포": "군포시", "상주": "상주시", "여주": "여주시", "양평": "양평군",
+            "강릉": "강릉시", "강진": "강진군", "거제": "거제시", "경산": "경산시",
+            "경주": "경주시", "공주": "공주시", "광명": "광명시", "광산": "광산구",
+            "구미": "구미시", "군산": "군산시", "김포": "김포시", "김해": "김해시",
+            "목포": "목포시", "문경": "문경시", "보령": "보령시", "부천": "부천시",
+            "사천": "사천시", "서산": "서산시", "성남": "성남시", "속초": "속초시",
+            "수원": "수원시", "순천": "순천시", "시흥": "시흥시", "아산": "아산시",
+            "안동": "안동시", "안산": "안산시", "안양": "안양시", "양산": "양산시",
+            "양주": "양주시", "여수": "여수시", "영주": "영주시", "영천": "영천시",
+            "용인": "용인시", "원주": "원주시", "의성": "의성군", "전주": "전주시",
+            "제주": "제주시", "진주": "진주시", "창원": "창원시", "천안": "천안시",
+            "청주": "청주시", "춘천": "춘천시", "충주": "충주시", "태백": "태백시",
+            "통영": "통영시", "파주": "파주시", "평택": "평택시", "포천": "포천시",
+            "포항": "포항시", "하남": "하남시", "화성": "화성시"
+        }
+
+        # 3. 레코드 파싱 및 정제 루프
         parsed_records = []
-        for row in reader:
+        for row in rows:
             record = {}
             for h in required_headers:
                 val = ""
                 if h == "시도":
-                    val = row.get("지역(도/시)", row.get("시도", ""))
-                    val = val.strip() if val else ""
-                    SIDO_NATIONAL = {"-", "", "전국", "중앙/공공", "중앙/전국", "중앙", "공공", "전체"}
-                    if val in SIDO_NATIONAL or val.startswith("중앙"):
-                        val = "전국"
+                    raw_sido = row.get("지역(도/시)", row.get("시도", ""))
+                    val = get_norm_sido(raw_sido)
                     record[h] = val
                     continue
                 elif h == "구군":
-                    val = row.get("지역(시/군/구)", row.get("구군", ""))
-                    val = val.strip() if val else ""
+                    raw_gugun = row.get("지역(시/군/구)", row.get("구군", ""))
+                    val = raw_gugun.strip() if raw_gugun else ""
                     GUGUN_ALL = {"-", "", "−", "–", "전체", "전지역", "해당없음", "없음"}
                     if val in GUGUN_ALL:
                         val = "전지역"
+                    else:
+                        # 끝자리가 시/군/구로 끝나지 않는 비표준 명칭 정제
+                        if len(val) >= 2 and not (val.endswith("시") or val.endswith("군") or val.endswith("구")):
+                            sido_val = record.get("시도", "전국")
+                            # 1) 동적 매핑 딕셔너리 조회
+                            if (sido_val, val) in gugun_map:
+                                val = gugun_map[(sido_val, val)]
+                            # 2) 방어 룰 조회
+                            elif val in hard_rules:
+                                val = hard_rules[val]
+                        
+                        # 최종 추가 방어 예외 (예: 시도와 결합하지 않은 단순 하드코딩 매칭)
+                        if val in hard_rules:
+                            val = hard_rules[val]
+                            
                     record[h] = val
                     continue
                 else:
