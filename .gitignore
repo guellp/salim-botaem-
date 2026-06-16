@@ -24,3 +24,5 @@ patch_passcode.py
 __pycache__/
 *.pyc
 .env
+
+.vercel

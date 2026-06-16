@@ -21,7 +21,43 @@ if sys.platform.startswith('win'):
     sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
 
 CSV_EXPORT_URL = 'https://docs.google.com/spreadsheets/d/1uW5z-CAxD7vGQ5X8e3de6CdgTDBfKPGtXJlm9ENCMWw/export?format=csv'
+KOREG_CSV_URL = 'https://docs.google.com/spreadsheets/d/1H7_gQ8m6YtYLiWKIkZ_O4LSf0mWwT3NAW-0yYbdq8No/export?format=csv&gid=990868410'
 HTML_FILE_PATH = 'index.html'
+
+def download_csv(url, name):
+    print(f"📥 구글 시트 [{name}] 데이터 다운로드 중... ({url})")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+    }
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=20) as response:
+        content = response.read().decode('utf-8')
+    return content
+
+def clean_koreg_sido(raw_sido):
+    if not raw_sido:
+        return "전국"
+    s = raw_sido.replace("신용보증재단", "").strip()
+    sido_mapping = {
+        "서울특별시": "서울", "서울시": "서울",
+        "부산광역시": "부산", "부산시": "부산",
+        "대구광역시": "대구", "대구시": "대구",
+        "인천광역시": "인천", "인천시": "인천",
+        "광주광역시": "광주", "광주시": "광주",
+        "대전광역시": "대전", "대전시": "대전",
+        "울산광역시": "울산", "울산시": "울산",
+        "세종특별자치시": "세종", "세종시": "세종",
+        "경기도": "경기",
+        "강원특별자치도": "강원", "강원도": "강원",
+        "충청북도": "충북",
+        "충청남도": "충남",
+        "전라북도": "전북", "전북특별자치도": "전북",
+        "전라남도": "전남",
+        "경상북도": "경북",
+        "경상남도": "경남",
+        "제주특별자치도": "제주", "제주시": "제주", "제주도": "제주"
+    }
+    return sido_mapping.get(s, s)
 
 def clean_support_type(raw_val):
     if not raw_val:
@@ -174,7 +210,11 @@ def download_and_parse_sheet():
             if record["서비스명"]:
                 parsed_records.append(record)
                 
-        print(f"   📊 파싱 성공: 총 {len(parsed_records)}건의 지원금 혜택 레코드 추출 완료!")
+        print(f"   📊 살림 지원금 혜택 데이터 파싱 성공: 총 {len(parsed_records)}건 추출 완료")
+        
+        pass
+            
+        print(f"   🏆 최종 융합된 데이터 레코드 수: {len(parsed_records)}건")
         return parsed_records
         
     except Exception as e:
