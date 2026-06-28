@@ -24,6 +24,94 @@ CSV_EXPORT_URL = 'https://docs.google.com/spreadsheets/d/1uW5z-CAxD7vGQ5X8e3de6C
 KOREG_CSV_URL = 'https://docs.google.com/spreadsheets/d/1H7_gQ8m6YtYLiWKIkZ_O4LSf0mWwT3NAW-0yYbdq8No/export?format=csv&gid=990868410'
 HTML_FILE_PATH = 'index.html'
 
+def get_column_letter(col_idx):
+    # col_idx: 1-based index (e.g. 1 -> A, 27 -> AA)
+    result = ""
+    while col_idx > 0:
+        col_idx, remainder = divmod(col_idx - 1, 26)
+        result = chr(65 + remainder) + result
+    return result
+
+def download_csv_gspread(name):
+    print(f"📥 구글 시트 [{name}] 데이터 gspread로 가져오는 중...")
+    from datetime import datetime
+    
+    key_paths = [
+        r'C:\Users\bwj10\.gemini\안토 개발부장 총괄실\credentials.json',
+        r'C:\Users\bwj10\OneDrive\바탕 화면\AI_Agents\다니 디자인 에이전트\service_account.json',
+        r'C:\Users\bwj10\.gemini\antigravity\gspread_key.json',
+    ]
+    key_file = None
+    for kp in key_paths:
+        if os.path.exists(kp) and kp.endswith('.json'):
+            key_file = kp
+            break
+            
+    if not key_file:
+        raise FileNotFoundError("Service account key file not found for gspread.")
+
+    import gspread
+    from google.oauth2.service_account import Credentials
+    scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = Credentials.from_service_account_file(key_file, scopes=scopes)
+    client = gspread.authorize(creds)
+    
+    SPREADSHEET_ID = '1uW5z-CAxD7vGQ5X8e3de6CdgTDBfKPGtXJlm9ENCMWw'
+    sh = client.open_by_key(SPREADSHEET_ID)
+    ws = sh.worksheet(name)
+    
+    values = ws.get_all_values()
+    
+    if values:
+        headers = values[0]
+        current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_date_str = datetime.now().strftime("%Y-%m-%d")
+        
+        # '업데이트 일시' 열이 있는지 확인
+        time_col_idx = -1
+        if '업데이트 일시' in headers:
+            time_col_idx = headers.index('업데이트 일시')
+            
+        # '정보수정일' 열이 있는지 확인
+        info_col_idx = -1
+        if '정보수정일' in headers:
+            info_col_idx = headers.index('정보수정일')
+        
+        # 오늘_신규추가 탭이고 정보수정일 열이 있다면 오늘 날짜로 자동 보정
+        if name == "오늘_신규추가" and info_col_idx != -1:
+            print(f"   🔄 [{name}] 탭의 '정보수정일'을 오늘 날짜({current_date_str})로 자동 보정합니다.")
+            for r_idx in range(1, len(values)):
+                while len(values[r_idx]) <= info_col_idx:
+                    values[r_idx].append('')
+                values[r_idx][info_col_idx] = current_date_str
+        
+        if time_col_idx == -1:
+            headers.append('업데이트 일시')
+            time_col_idx = len(headers) - 1
+            print(f"   ➕ [{name}] 탭에 '업데이트 일시' 헤더 컬럼을 신설합니다.")
+            for r_idx in range(1, len(values)):
+                values[r_idx].append(current_time_str)
+        else:
+            print(f"   🔄 [{name}] 탭의 '업데이트 일시'를 현재 시각({current_time_str})으로 동기화합니다.")
+            for r_idx in range(1, len(values)):
+                while len(values[r_idx]) <= time_col_idx:
+                    values[r_idx].append('')
+                values[r_idx][time_col_idx] = current_time_str
+                
+        # 변경된 데이터를 시트에 벌크로 덮어쓰기 (Write)
+        try:
+            end_col = get_column_letter(len(headers))
+            ws.update(range_name=f"A1:{end_col}{len(values)}", values=values)
+            print(f"   ✅ [{name}] 탭 스프레드시트 업데이트 일시 갱신 완료!")
+        except Exception as sheet_err:
+            print(f"   ⚠️ [{name}] 탭 스프레드시트 쓰기 실패 (읽기 모드로 계속 진행): {sheet_err}")
+            
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerows(values)
+    return output.getvalue()
+
 def download_csv(url, name):
     print(f"📥 구글 시트 [{name}] 데이터 다운로드 중... ({url})")
     headers = {
@@ -76,17 +164,16 @@ def clean_support_type(raw_val):
     return "기타"
 
 def download_and_parse_sheet():
-    print(f"📥 구글 시트 데이터 다운로드 중... ({CSV_EXPORT_URL})")
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    }
-    
     try:
-        req = urllib.request.Request(CSV_EXPORT_URL, headers=headers)
-        with urllib.request.urlopen(req, timeout=20) as response:
-            content = response.read().decode('utf-8')
-            
+        # 0. 오늘_신규추가 탭 날짜 동기화 및 갱신
+        try:
+            download_csv_gspread("오늘_신규추가")
+        except Exception as e:
+            print(f"   ⚠️ 오늘_신규추가 탭 날짜 동기화 실패 (건너뜀): {e}")
+
+        # 1. 행안부_공공서비스 탭 데이터 로드 및 갱신
+        content = download_csv_gspread("행안부_공공서비스")
+        
         print("   🏆 데이터 다운로드 완료! CSV 데이터 파싱 개시...")
         
         # CSV 파싱

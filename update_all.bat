@@ -4,7 +4,12 @@ echo [STATUS] Salim Botaem Auto Sync Tool Running...
 echo ==================================================
 
 echo.
-echo [STEP 1] Downloading sheet data and updating password...
+echo [STEP 1] Collecting public welfare data via API (Google Sheet Update)...
+..\.venv\Scripts\python.exe ..\salim_scraper.py
+if errorlevel 1 goto DATA_ERROR
+
+echo.
+echo [STEP 2] Downloading sheet data and updating password...
 python inject_sheet_data.py
 if errorlevel 1 goto DATA_ERROR
 
